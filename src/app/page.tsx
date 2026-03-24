@@ -8,6 +8,7 @@ export default function Page() {
   const [outline, setOutline] = useState("");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const generateArticle = async () => {
     if (!topic.trim()) {
@@ -17,6 +18,7 @@ export default function Page() {
 
     setLoading(true);
     setContent("");
+    setError("");
 
     const systemPrompt = mode === "original"
       ? "你是專業SEO寫作助手，使用繁體中文，生成原創、流暢、結構清晰、無機器感的文章，約1200-1500字。"
@@ -54,32 +56,20 @@ export default function Page() {
         }),
       });
 
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error?.message || "API請求失敗");
+      }
+
       const data = await res.json();
       if (data.choices?.[0]?.message?.content) {
         setContent(data.choices[0].message.content);
       } else {
-        throw new Error("無返回內容");
+        throw new Error("模型未返回有效內容");
       }
     } catch (err) {
       console.error(err);
-      await new Promise(r => setTimeout(r, 800));
-      setContent(`
-【模型】${model === "openai" ? "OpenAI (國外)" : "DeepSeek (國內)"}
-【模式】${mode === "original" ? "原創寫作" : "文章仿写"}
-【主題】${topic}
-
-✅ 本文為頂級雙模型 AI 寫作工具
-✅ 支援國內外模型自動切換
-✅ 無需VPN、穩定不掉線
-✅ 正式商用版介面
-✅ 可無限擴充模型
-
-你已完成：
-• 介面開發 100%
-• 功能開發 100%
-• 雙模型對接 100%
-• 穩定運行 100%
-      `);
+      setError(`生成失敗：${(err as Error).message}`);
     } finally {
       setLoading(false);
     }
@@ -88,11 +78,8 @@ export default function Page() {
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "2rem" }}>
       <h1 style={{ textAlign: "center", fontSize: "2rem", marginBottom: "1rem" }}>
-        AI SEO 寫作工具 - 頂級雙模型版
+        AI SEO 寫作工具 - 正式版
       </h1>
-      <p style={{ textAlign: "center", color: "#666", marginBottom: "2rem" }}>
-        支援：國內 DeepSeek + 國外 OpenAI 自動切換
-      </p>
 
       {/* 模型切換 */}
       <div style={{ marginBottom: "1rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
@@ -152,6 +139,13 @@ export default function Page() {
       >
         {loading ? "✅ AI 生成中..." : "🚀 生成文章"}
       </button>
+
+      {/* 錯誤提示 */}
+      {error && (
+        <div style={{ marginTop: "1rem", padding: "1rem", backgroundColor: "#ffebee", borderRadius: "6px", color: "#c62828" }}>
+          {error}
+        </div>
+      )}
 
       {/* 結果 */}
       {content && (
